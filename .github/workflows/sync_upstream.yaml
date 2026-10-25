@@ -1,0 +1,42 @@
+name: Sync from upstream
+
+on:
+  schedule:
+    - cron: '15 4 * * *'  # every day at 04:15 UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      UPSTREAM_REPO: nasa-jpl/osr-rover-code
+      UPSTREAM_BRANCH: master
+      TARGET_BRANCH: master
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+      - name: Merge upstream changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          git fetch upstream "${UPSTREAM_BRANCH}"
+
+          if git merge-base --is-ancestor "upstream/${UPSTREAM_BRANCH}" HEAD; then
+            echo "Already up to date with ${UPSTREAM_REPO}@${UPSTREAM_BRANCH}."
+            exit 0
+          fi
+
+          if ! git merge --no-edit "upstream/${UPSTREAM_BRANCH}" \
+               -m "Merge ${UPSTREAM_REPO}@${UPSTREAM_BRANCH} into ${TARGET_BRANCH}"; then
+            git merge --abort
+            echo "::error::Merge conflict with ${UPSTREAM_REPO}@${UPSTREAM_BRANCH}. Merge upstream manually and resolve the conflicts."
+            exit 1
+          fi
+
+          git push origin "HEAD:${TARGET_BRANCH}"
