@@ -447,8 +447,23 @@ You're in a plain Ubuntu window, not inside the container. Run the `rocker` comm
 
 ---
 
+## Real rover: Raspberry Pi 5 login
+
+The real rover's Raspberry Pi 5 uses this login:
+
+- **User:** `pi`
+- **Password:** `Ttbots2026`
+- **IP address:** `192.168.68.78`
+
+---
+
 ## Want to learn more?
 
 - [Main README](README.md): an overview of the rover code.
 - [Simulation README](ROS/osr_gazebo/README.md): how the simulation works.
 - [ROS overview](ROS/README.md): how the rover's software is organized.
+- [Customized parts](https://github.com/Team-Turtlebots/open-source-rover/blob/master/parts_list/customized_parts.md):
+  our changes to the official build. If the real rover runs on a Ryobi ONE+ 18V battery, follow
+  [Configure the Roboclaws](https://github.com/Team-Turtlebots/open-source-rover/blob/master/parts_list/customized_parts.md#configure-the-roboclaws)
+  and [Configure the rover software](https://github.com/Team-Turtlebots/open-source-rover/blob/master/parts_list/customized_parts.md#configure-the-rover-software)
+  to change the Roboclaw settings and `ROS/osr_bringup/config/roboclaw_params.yaml`.
