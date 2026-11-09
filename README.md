@@ -45,4 +45,5 @@ ros2 launch osr_gazebo empty_world.launch.py
 The setup directory contains tutorial files for getting everything setup and configured for running the rover code. You should proceed through them in the following order:
 
 * [Raspberry Pi setup](setup/rpi.md)
+* [Ryobi 18V battery configuration](setup/ryobi_18v_battery.md): only if you use a Ryobi ONE+ 18V battery instead of a 4S LiPo. Do this before the rover code bringup.
 * [Rover code bringup](setup/rover_bringup.md)

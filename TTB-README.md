@@ -463,7 +463,13 @@ The real rover's Raspberry Pi 5 uses this login:
 - [Simulation README](ROS/osr_gazebo/README.md): how the simulation works.
 - [ROS overview](ROS/README.md): how the rover's software is organized.
 - [Customized parts](https://github.com/Team-Turtlebots/open-source-rover/blob/master/parts_list/customized_parts.md):
-  our changes to the official build. If the real rover runs on a Ryobi ONE+ 18V battery, follow
-  [Configure the Roboclaws](https://github.com/Team-Turtlebots/open-source-rover/blob/master/parts_list/customized_parts.md#configure-the-roboclaws)
-  and [Configure the rover software](https://github.com/Team-Turtlebots/open-source-rover/blob/master/parts_list/customized_parts.md#configure-the-rover-software)
-  to change the Roboclaw settings and `ROS/osr_bringup/config/roboclaw_params.yaml`.
+  our changes to the official build.
+- [Ryobi 18V battery configuration](setup/ryobi_18v_battery.md): if the real rover runs on
+  a Ryobi ONE+ 18V battery, change the Roboclaw settings and
+  `ROS/osr_bringup/config/roboclaw_params.yaml` as this page shows.
+
+> [!IMPORTANT]
+> On the **real rover**, do the [Ryobi 18V battery configuration](setup/ryobi_18v_battery.md)
+> **before the first bringup** ([Rover code bringup](setup/rover_bringup.md)). The default settings
+> are for a 4S LiPo. With an 18V pack, the motor controllers stop the motors with a voltage error,
+> and the motors get more than their rated 12V. The simulation doesn't need this change.

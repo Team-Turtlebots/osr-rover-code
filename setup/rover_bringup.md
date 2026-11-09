@@ -2,6 +2,8 @@
 
 **Important**: These instructions require you to have followed the steps in [rpi setup](rpi.md).
 
+**Using a battery with a higher voltage than a 4S LiPo, such as a Ryobi ONE+ 18V pack?** Follow [Ryobi 18V battery configuration](ryobi_18v_battery.md) first, before you bring up the rover for the first time.
+
 ## Getting your rover ready for action
 
 If this is the first time setting up the rover, you may want to take some precautions.
