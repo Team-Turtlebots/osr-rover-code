@@ -453,7 +453,20 @@ The real rover's Raspberry Pi 5 uses this login:
 
 - **User:** `pi`
 - **Password:** `Ttbots2026`
-- **IP address:** `192.168.68.78`
+- **IP address:** `192.168.68.87`
+
+> [!NOTE]
+> **Error about a missing `lgpio` / `adafruit-lgpio` package on the rover?** Don't install
+> `adafruit-lgpio`. It needs Python 3.13, and the rover's Ubuntu 24.04 has Python 3.12, so pip
+> refuses. Install `lgpio` instead, inside the rover's Python environment:
+>
+> ```bash
+> cd ~/osr_ws
+> source venv/bin/activate
+> python3 -m pip install lgpio
+> ```
+>
+> The [Raspberry Pi setup guide](setup/rpi.md) now installs it for you.
 
 ---
 

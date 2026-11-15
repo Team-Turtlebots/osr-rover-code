@@ -82,10 +82,16 @@ touch ./venv/COLCON_IGNORE
 sudo rosdep init
 rosdep update
 rosdep install --from-paths src --ignore-src --rosdistro=$ROS_DISTRO -y
-python3 -m pip install adafruit-circuitpython-servokit ina260 RPi.GPIO smbus
+python3 -m pip install adafruit-circuitpython-servokit ina260 RPi.GPIO smbus lgpio
 # build the ROS packages
 python3 -m colcon build --symlink-install
 ```
+
+> [!NOTE]
+> `lgpio` is needed on a Raspberry Pi 5. Some versions of Adafruit Blinka (installed with `adafruit-circuitpython-servokit`) import it
+> but don't install it. If it's missing, Blinka's error tells you to run `pip install adafruit-lgpio`, but that package
+> requires Python 3.13 and fails on Ubuntu 24.04 (Python 3.12). Install `lgpio` instead, as above: it provides the same
+> module and supports Python 3.12.
 
 It should run successfully. If it doesn't, please ask on Slack or [submit an issue](https://github.com/nasa-jpl/osr-rover-code/issues/new) if you believe there's a problem with the instructions.
 
