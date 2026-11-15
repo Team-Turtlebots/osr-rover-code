@@ -35,6 +35,10 @@ rover:
 
 The software will load in these changes and apply them. Take a look at the parameters for the [roboclaws](../ROS/osr_bringup/config/roboclaw_params.yaml) as well. If you used `nano`, you can save and exit the editor using `ctrl+o` followed by `ctrl+x`.
 
+[osr_launch.py](../ROS/osr_bringup/launch/osr_launch.py) loads `osr_params_mod.yaml`, `roboclaw_params_mod.yaml` and `pca9685_params_mod.yaml` after the defaults, so their values win. When it starts, it prints which files it loaded, for example `Parameter overrides: .../osr_params_mod.yaml`. Each top-level section is the name of a node, so any of these files can change the settings of any node in the launch file. You'll use this for the servo calibration and the gamepad settings below. Empty files are fine. A section with nothing under its `ros__parameters:` line stops the launch with an error, so delete or comment out sections you don't use.
+
+If you built with `colcon build --symlink-install` as in [rpi setup](rpi.md), new and changed `_mod.yaml` files take effect the next time you launch the rover. Otherwise, rebuild first.
+
 ## Calibrating the corner servos
 
 The servo motors at each corner have absolute encoders that will 'remember' where the wheels are even when power is turned off but we still have to calibrate them the first time so they know where the zero position is. Since the servo motors have a limited range of about 300 degrees, we'll want to make sure we are able to make use of the full range of motion. Start by unscrewing the M3 screw that connects the corner assembly to the servo output shaft using a 2.5mm hex wrench. Do this for all 4 corners. Detach the corner assembly from the servo so that the servo can spin freely.
@@ -66,28 +70,52 @@ If it's moving farther away from the center, try 140, if it's getting closer, tr
 > [!IMPORTANT]
 > Make sure the servo motors are still free to spin without much friction by lifting the servo bracket until the wheel doesn't touch the ground. You can either prop it up or hold it up manually.
 
-Repeat this for wheels at channel 1, 2, and 3. You should have 4 values, for example `[135, 155, 125, 162]`. Now we need to tell the software what these values are, so when you command the corner motors to turn, they will use these values as the true centers. Open the file `osr_mod_launch.py`:
+Repeat this for wheels at channel 1, 2, and 3. You should have 4 values, for example `[135, 155, 125, 162]`. Now we need to tell the software what these values are, so when you command the corner motors to turn, they will use these values as the true centers. Open `osr_params_mod.yaml`:
 
 ```commandline
-nano ~/osr_ws/src/osr-rover-code/ROS/osr_bringup/launch/osr_mod_launch.py
+nano ~/osr_ws/src/osr-rover-code/ROS/osr_bringup/config/osr_params_mod.yaml
 ```
 
-Look for the line that says `parameters=[{'centered_pulse_widths': [165, 134, 135, 160]}]`. Replace the values using the 4 values you just found. Save and exit using ctrl+o then ctrl+x. The corner servo motors are calibrated and ready to go! Next we'll configure the gamepad to control the rover.
+Add a section for the servo node (`servo_wrapper`) with the 4 values you just found, in channel order 0, 1, 2, 3:
+
+```yaml
+servo_wrapper:
+  ros__parameters:
+    centered_pulse_widths: [135, 155, 125, 162]
+```
+
+This replaces the default `centered_pulse_widths` in [osr_launch.py](../ROS/osr_bringup/launch/osr_launch.py). Save and exit using ctrl+o then ctrl+x. The corner servo motors are calibrated and ready to go! Next we'll configure the gamepad to control the rover.
 
 ## Mapping remote controller buttons and axes to rover movement
 
 Not all controllers are the same and so we'll want to configure which remote controller axis and button does what. We'll be configuring how fast the rover can go, which axis makes it move forwards and backwards, which axis makes it move left and right, and which axis makes it spin in place.
 
-We'll be making these changes in the file `osr-rover-code/ROS/osr_bringup/launch/osr_mod_launch.py`. These values in the node joy_to_twist are of interest:
+The defaults are in the `teleop_twist_joy` node in [osr_launch.py](../ROS/osr_bringup/launch/osr_launch.py). To change them, add a `teleop_twist_joy` section to `osr_params_mod.yaml`. A name like `axis_linear.x` in the launch file becomes `axis_linear:` with `x:` indented under it. These values are of interest:
 
 ```yaml
-    {"scale_linear": 0.05},  # scale to apply to drive speed, in m/s: drive_motor_rpm * 2pi / 60 * wheel radius * slowdown_factor
-    {"scale_angular": 0.05},  # scale to apply to angular speed, in rad/s: scale_linear / min_radius
-    {"scale_linear_turbo": 0.05},  # scale to apply to linear speed, in m/s
-    {"enable_button": 0},  # which button to press to enable movement
-    {"axis_linear.x": 3},
-    {"axis_angular.yaw": 2},  # which joystick axis to use for rotating
-    {"axis_angular.pitch": 0},  # axis to use for in-place rotation
+teleop_twist_joy:
+  ros__parameters:
+    scale_linear:
+      x: 0.05  # scale to apply to drive speed, in m/s: drive_motor_rpm * 2pi / 60 * wheel radius * slowdown_factor
+    scale_angular:
+      yaw: 0.05  # scale to apply to angular speed, in rad/s: scale_linear / min_radius
+      pitch: 0.05  # scale to apply to in-place rotation speed, in rad/s
+    scale_linear_turbo:
+      x: 0.05  # scale to apply to linear speed in turbo mode, in m/s
+    enable_button: 0  # which button to press to enable movement
+    axis_linear:
+      x: 3  # which joystick axis to use for driving forwards and backwards
+    axis_angular:
+      yaw: 2  # which joystick axis to use for turning
+      pitch: 0  # axis to use for in-place rotation
+```
+
+If the gamepad isn't `/dev/input/event0`, also set its number for the `joy` node:
+
+```yaml
+joy:
+  ros__parameters:
+    device_id: 1  # for /dev/input/event1
 ```
 
 Start by setting the `scale` variables (first three) low (e.g. 0.05) so you can easily confirm the rover moves as intended and avoid a potential crash. In the next steps once you have confirmed everything works ok, we'll set these scale values to more sensible settings.
@@ -118,7 +146,7 @@ Take a moment to choose which:
 * axis you'd like to use to make the rover turn
 * axis you'd like to use to make the rover rotate in place
 
-You can always come back to this and change these later. In the window where the `ros2 topic echo /joy` messages are printing, for each of these axes and button you selected, write down which *index* in the list of axes/buttons changes when you move the axis. Open the file we looked at earlier `osr_mod_launch.py` and:
+You can always come back to this and change these later. In the window where the `ros2 topic echo /joy` messages are printing, for each of these axes and button you selected, write down which *index* in the list of axes/buttons changes when you move the axis. Open `osr_params_mod.yaml` again and, in the `teleop_twist_joy` section:
 
 * when you move the axis that you'd like to use to control forward movement, take note of which number changes when you move the joystick. Counting starts at zero, so if the axis that changes is 3rd in the list, the axis number is 3-1=2. Enter this number (in this case 2) right after `axis_linear.x`.
 * do the same for the axis you'd like to use for turning and for rotating in place, using `axis_angular.yaw` for turning and `axis_angular.pitch` for rotating in place.
@@ -153,10 +181,10 @@ Now you're all set up to launch the full rover software stack!
 In a sourced terminal (`source /opt/ros/foxy/setup.bash && source ~/osr_ws/install/setup.bash`, unless you added these to your `~/.bashrc` file) already before, run
 
 ```commandline
-ros2 launch osr_bringup osr_mod_launch.py
+ros2 launch osr_bringup osr_launch.py
 ```
 
-This will start up the ROS 2 nodes to run the rover with the changes you made in the previous steps.
+This will start up the ROS 2 nodes to run the rover with the changes you made in the previous steps. Check that the `Parameter overrides:` line at the start lists your `_mod.yaml` files.
 
 Any errors or warnings will be displayed there in case something went wrong.  
 
@@ -175,7 +203,7 @@ the [RPi setup](rpi.md) by holding down the right back button (RB) instead.
 If you have questions, please post on the Slack forum in the `#troubleshooting` channel or if you think there's a problem with documentation, [submit an issue](https://github.com/nasa-jpl/osr-rover-code/issues/new).
 
 > [!NOTE]
-> If you notice the rover is moving in the opposite direction as your commands, add a minus sign to the appropriate `scale_` factor in the `osr_mod_launch.py` file. `ctrl-C` to stop the currently running code, then re-run it for the changes to take effect.
+> If you notice the rover is moving in the opposite direction as your commands, add a minus sign to the appropriate `scale_` factor in the `teleop_twist_joy` section of `osr_params_mod.yaml`. `ctrl-C` to stop the currently running code, then re-run it for the changes to take effect.
 
 ### Optional arguments
 
@@ -212,7 +240,7 @@ If you want to create new nodes to use additional PWM channels, they should publ
 
 ## Automatic bringup with launch script
 
-In this section we'll see how we can have the RPi automatically launch the rover code when it launches. That way you don't have to SSH in to run the rover and it can be controlled completely offline. Any modified parameters in `osr_mod_launch.py` and in the config folder will be found automatically.
+In this section we'll see how we can have the RPi automatically launch the rover code when it launches. That way you don't have to SSH in to run the rover and it can be controlled completely offline. Any modified parameters in the `_mod.yaml` files in the config folder will be found automatically.
 
 > [!CAUTION]
 > We do not recommend enabling the service until you have verified that everything
@@ -251,7 +279,7 @@ related to managing this service which you might find useful:
 | View live service list                       | sudo journalctl -f                         |
 
 Once you have fully tested the robot and made sure that everything is running correctly by starting the rover code manually
-via `ros2 launch osr_bringup osr_mod_launch.py`, enable the startup service on the robot with the command below:
+via `ros2 launch osr_bringup osr_launch.py`, enable the startup service on the robot with the command below:
 
 ```commandline
 sudo systemctl enable osr_startup.service

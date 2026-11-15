@@ -42,23 +42,25 @@ By default the rover code sends open-loop **duty** commands to the Roboclaws (`d
 | 5S ONE+, full (21V) | **7** | 60% | ~12.6V |
 | 5S ONE+, nominal (18V) | **7** | 60% | ~10.8V |
 
-On the Raspberry Pi, open the Roboclaw parameter file:
+On the Raspberry Pi, open the Roboclaw override file you created during [rpi setup](rpi.md):
 
 ```commandline
 cd ~/osr_ws/src/osr-rover-code/ROS/osr_bringup/config
-nano roboclaw_params.yaml
+nano roboclaw_params_mod.yaml
 ```
 
-Change the `velocity_qpps_to_duty_factor` line to:
+Add these lines:
 
 ```yaml
-    velocity_qpps_to_duty_factor: 7  # was 8; lowered for a 5S (18V) battery
+roboclaw_wrapper:
+  ros__parameters:
+    velocity_qpps_to_duty_factor: 7  # default 8; lowered for a 5S (18V) battery
 ```
 
 The factor must be an integer. This keeps the motors near their 12V rating and keeps commanded speeds close to actual speeds.
 
 > [!NOTE]
-> Make this change in `roboclaw_params.yaml` itself. [osr_launch.py](../ROS/osr_bringup/launch/osr_launch.py) loads only that file. It doesn't read `roboclaw_params_mod.yaml`.
+> Leave `roboclaw_params.yaml` itself unchanged. [osr_launch.py](../ROS/osr_bringup/launch/osr_launch.py) loads `roboclaw_params_mod.yaml` after it, so your value wins, and code updates don't overwrite it. When the rover starts, check that the `Parameter overrides:` line in the terminal lists `roboclaw_params_mod.yaml`.
 
 If you built the workspace with `colcon build --symlink-install` as in [rpi setup](rpi.md), the change takes effect the next time you launch the rover. Otherwise, rebuild first:
 
@@ -67,7 +69,7 @@ cd ~/osr_ws
 python3 -m colcon build --symlink-install
 ```
 
-**Alternative:** set `duty_mode: false` in the same file to use the Roboclaws' closed-loop velocity control instead. It only applies the duty each speed needs, whatever the battery voltage. It depends on well-tuned velocity PID values on every Roboclaw, though.
+**Alternative:** set `duty_mode: false` in the same `roboclaw_wrapper` section to use the Roboclaws' closed-loop velocity control instead. It only applies the duty each speed needs, whatever the battery voltage. It depends on well-tuned velocity PID values on every Roboclaw, though.
 
 ## 3. First power-up checklist
 
@@ -100,4 +102,4 @@ python3 -m colcon build --symlink-install
 
 ## Going back to a 4S LiPo
 
-Undo both changes: set Max Main Battery back to 18.5V and Min Main Battery to 11.5V on all three Roboclaws, and set `velocity_qpps_to_duty_factor` back to `8`.
+Undo both changes: set Max Main Battery back to 18.5V and Min Main Battery to 11.5V on all three Roboclaws, and remove the `velocity_qpps_to_duty_factor` line from `roboclaw_params_mod.yaml` so the default of `8` applies again.

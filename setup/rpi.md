@@ -101,12 +101,12 @@ Now let's add the generated files to the path so ROS can find them:
 source install/setup.bash
 ```
 
-The rover has some customizable settings that will overwrite the default values.
-Whether you have any changes compared to the defaults or not, you have to manually create these files:
+The rover has some customizable settings that will overwrite the default values. Your changes go in
+`_mod.yaml` files next to the default ones, so that code updates never overwrite them. Create them now (they can stay empty):
 
 ```bash
 cd ~/osr_ws/src/osr-rover-code/ROS/osr_bringup/config
-touch osr_params_mod.yaml roboclaw_params_mod.yaml
+touch osr_params_mod.yaml roboclaw_params_mod.yaml pca9685_params_mod.yaml
 ```
 
 In the [rover bringup instructions](rover_bringup.md) we will edit these files to make any changes.
