@@ -17,7 +17,7 @@ source install/setup.bash
 ```
 
 - **Simulation (Docker, the usual dev path):** `docker build -t osr-rover-sim .`, then `rocker --x11 --name osr osr-rover-sim`. Inside the container, run `ros2 launch osr_gazebo empty_world.launch.py`. To drive it, open a second shell with `docker exec -it osr bash` and run `ros2 run teleop_twist_keyboard teleop_twist_keyboard`. The image copies the repo in at build time, so rebuild the image after changing code.
-- **Hardware:** `ros2 launch osr_bringup osr_launch.py` (add `enable_odometry:=true` for wheel odometry). On the Pi, `init_scripts/launch_osr.sh` with `osr_startup.service` launches `osr_mod_launch.py` instead when that file exists. Stop the systemd service before you launch anything by hand.
+- **Hardware:** `ros2 launch osr_bringup osr_launch.py` (add `enable_odometry:=true` for wheel odometry). On the Pi, `init_scripts/launch_osr.sh` with `osr_startup.service` runs the same launch file, or a legacy `osr_mod_launch.py` copy if one exists. Stop the systemd service before you launch anything by hand.
 - **Tests:** only `ROS/osr_control/test/test_kinematics.py` (pytest). `kinematics.py` has no ROS dependencies, so the tests run without ROS: `cd ROS/osr_control && python3 -m pytest test/` (`setup.cfg` sets `pythonpath = .`). Run a single test with `python3 -m pytest test/test_kinematics.py::test_straight_drive_equal_speed_opposite_sides`. Through colcon: `colcon test --packages-select osr_control`.
 - **Hardware bench scripts** (Roboclaw, servo calibration, INA260, GPIO/e-stop) are in `scripts/` and run directly on the Pi.
 
@@ -46,4 +46,16 @@ Command flow:
 
 ## Per-rover customization
 
-The setup docs say to put per-rover changes in `osr_bringup/config/*_mod.yaml` (gitignored; the Dockerfile and `setup/rpi.md` create them empty) and in `osr_bringup/launch/osr_mod_launch.py`, not in the default files, so upstream merges stay clean. The stock `osr_launch.py` loads only the base YAML files, not the `_mod.yaml` files. Corner servo center pulse widths (`centered_pulse_widths`) and joystick axis mappings and scales are set inline in the launch file. If the rover uses a Ryobi 18V battery instead of a 4S LiPo, `roboclaw_params.yaml` and the Roboclaw settings must be changed first (see `setup/ryobi_18v_battery.md`).
+Per-rover values go in `osr_bringup/config/{osr,roboclaw,pca9685}_params_mod.yaml`, never in the default files, so upstream merges stay clean. These files are gitignored; `setup/rpi.md` and the Dockerfile create them empty. `osr_launch.py` adds every existing mod file to every node's parameters, after the defaults and after the values written in the launch file, so the mod values win. Sections are keyed by node name, so a mod file can override any node: `servo_wrapper` for `centered_pulse_widths`, `teleop_twist_joy` and `joy` for the gamepad, `roboclaw_wrapper` for the Ryobi `velocity_qpps_to_duty_factor` (see `setup/ryobi_18v_battery.md`).
+
+- The launch file looks for mod files next to the real path of the installed `osr_params.yaml`. With `--symlink-install` that is the source `config/` folder, so new or edited mod files work without a rebuild.
+- Empty or comment-only mod files are skipped. A section with an empty `ros__parameters` stops the launch on purpose: rcl rejects such a file, and since every node gets every mod file, all nodes would crash-loop.
+- The launch prints `Parameter overrides: <files>` at startup. Check that line to confirm which overrides loaded.
+- To test the launch without hardware, run it in the `osr-rover-sim` image and read values with `ros2 param get --no-daemon`. `roboclaw_wrapper`, `pca9685_interface` and `ina260` crash and respawn without hardware; that's expected.
+
+## Workflow rules
+
+- Make every change in a git worktree on its own branch, never directly on `master`. Worktrees go in `.claude/worktrees/`, which is listed in `.git/info/exclude`.
+- Merging into the fork's `master` needs at least one review by someone else. Open a PR against `Team-Turtlebots/osr-rover-code` `master` and don't merge it yourself.
+- A PR against upstream (`nasa-jpl/osr-rover-code`) needs the team coaches' review and approval before it is opened.
+- When this repo is opened from Windows through `\\wsl.localhost`, Windows git can't write `.git/index`. Run git inside Ubuntu (`wsl.exe -d Ubuntu -- bash -lc 'cd ~/osr-rover-code && git ...'`).
