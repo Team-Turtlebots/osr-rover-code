@@ -453,7 +453,7 @@ The real rover's Raspberry Pi 5 uses this login:
 
 - **User:** `pi`
 - **Password:** `Ttbots2026`
-- **IP address:** `192.168.68.87`
+- **IP address:** `192.168.68.80`
 
 > [!NOTE]
 > **Error about a missing `lgpio` / `adafruit-lgpio` package on the rover?** Don't install
