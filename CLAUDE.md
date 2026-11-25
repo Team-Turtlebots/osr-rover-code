@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ROS 2 (Python 3) code for the JPL Open Source Rover (a six-wheel rocker-bogie with four steerable corners). It runs on a Raspberry Pi on the real rover and also in a Gazebo Classic simulation. This repo is Team TurtleBots' fork of `nasa-jpl/osr-rover-code`. `.github/workflows/sync_upstream.yaml` merges upstream `master` into `master` every day and fails on conflicts, so keep changes to upstream files small and easy to merge. `TTB-README.md` is the team's beginner guide for running the simulation on Windows through WSL, Docker, and rocker.
 
+The team's project is **Marpy**, a modular rover for biodiversity research, built for FIRST LEGO League (FLL). The team members are students, so explain plainly and keep code beginner-readable. The biodiversity features live in the team's own package `ROS/osr_biodiversity` (see its `CLAUDE.md` and `README.md`), not in the upstream packages.
+
 ## Build, run, test
 
 The ROS packages are built in a colcon workspace at `~/osr_ws`, with this repo cloned to `~/osr_ws/src/osr-rover-code`. Python dependencies live in a venv at `~/osr_ws/venv` (created with `--system-site-packages`, with a `COLCON_IGNORE` inside it). Activate the venv before building so colcon uses its Python:
@@ -18,12 +20,12 @@ source install/setup.bash
 
 - **Simulation (Docker, the usual dev path):** `docker build -t osr-rover-sim .`, then `rocker --x11 --name osr osr-rover-sim`. Inside the container, run `ros2 launch osr_gazebo empty_world.launch.py`. To drive it, open a second shell with `docker exec -it osr bash` and run `ros2 run teleop_twist_keyboard teleop_twist_keyboard`. The image copies the repo in at build time, so rebuild the image after changing code.
 - **Hardware:** `ros2 launch osr_bringup osr_launch.py` (add `enable_odometry:=true` for wheel odometry). On the Pi, `init_scripts/launch_osr.sh` with `osr_startup.service` launches `osr_mod_launch.py` instead when that file exists. Stop the systemd service before you launch anything by hand.
-- **Tests:** only `ROS/osr_control/test/test_kinematics.py` (pytest). `kinematics.py` has no ROS dependencies, so the tests run without ROS: `cd ROS/osr_control && python3 -m pytest test/` (`setup.cfg` sets `pythonpath = .`). Run a single test with `python3 -m pytest test/test_kinematics.py::test_straight_drive_equal_speed_opposite_sides`. Through colcon: `colcon test --packages-select osr_control`.
+- **Tests:** `ROS/osr_biodiversity/test/` (pytest, no ROS needed: `cd ROS/osr_biodiversity && python3 -m pytest test/`), and `ROS/osr_control/test/test_kinematics.py` (pytest). `kinematics.py` has no ROS dependencies, so the tests run without ROS: `cd ROS/osr_control && python3 -m pytest test/` (`setup.cfg` sets `pythonpath = .`). Run a single test with `python3 -m pytest test/test_kinematics.py::test_straight_drive_equal_speed_opposite_sides`. Through colcon: `colcon test --packages-select osr_control`.
 - **Hardware bench scripts** (Roboclaw, servo calibration, INA260, GPIO/e-stop) are in `scripts/` and run directly on the Pi.
 
 ## Architecture
 
-There are four packages in `ROS/`:
+There are four upstream packages in `ROS/`, plus the team's `osr_biodiversity` (camera, phone page, Pl@ntNet plant ID, observation log):
 
 - `osr_interfaces`: custom messages. `CommandDrive` holds 6 wheel velocities in rad/s. `CommandCorner` holds 4 corner angles in rad, with 0 meaning straight. `CommandPWM` and `Status` are the others.
 - `osr_control` (ament_python): the nodes. Entry points are in `setup.py`.

@@ -1,0 +1,12 @@
+biodiversity_web:
+  ros__parameters:
+    image_topic: /camera/image_raw
+    data_dir: ~/bio_data
+    host: 0.0.0.0
+    port: 8000
+    stream_width: 640       # live view only; Identify uses the full camera resolution
+    stream_fps: 10.0
+    jpeg_quality: 90
+    plantnet_key_file: ~/.config/osr_biodiversity/plantnet_key   # keep the key out of the repo
+    plantnet_lang: en
+    plantnet_project: all
