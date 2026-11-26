@@ -35,7 +35,12 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True,
             respawn=True,
-            parameters=[roboclaw_params, {'device': '/dev/serial1'}]
+            parameters=[roboclaw_params, {
+                'device': '/dev/serial1',
+                # 7 instead of 8 for the Ryobi ONE+ 18V battery, so the 12V drive motors
+                # aren't overvolted. See setup/ryobi_18v_battery.md.
+                'velocity_qpps_to_duty_factor': 7,
+            }]
         )
     )
     ld.add_action(

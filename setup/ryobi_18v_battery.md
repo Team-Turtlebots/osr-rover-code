@@ -60,6 +60,9 @@ The factor must be an integer. This keeps the motors near their 12V rating and k
 > [!NOTE]
 > Make this change in `roboclaw_params.yaml` itself. [osr_launch.py](../ROS/osr_bringup/launch/osr_launch.py) loads only that file. It doesn't read `roboclaw_params_mod.yaml`.
 
+> [!TIP]
+> **TurtleBots rover:** our rover runs [osr_mod_launch.py](../ROS/osr_bringup/launch/osr_mod_launch.py), which already sets `velocity_qpps_to_duty_factor: 7` for the `roboclaw_wrapper` node, so leave `roboclaw_params.yaml` at `8`. A value set in the launch file overrides the one in the YAML file, and keeping it in our own launch file avoids clashes with the daily upstream merge.
+
 If you built the workspace with `colcon build --symlink-install` as in [rpi setup](rpi.md), the change takes effect the next time you launch the rover. Otherwise, rebuild first:
 
 ```commandline
