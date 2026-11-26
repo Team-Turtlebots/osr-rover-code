@@ -1,0 +1,19 @@
+# Python packages for running the tests on your PC (TurtleBots).
+#
+# The tests in ROS/osr_control/test and ROS/osr_biodiversity/test don't need ROS, so they run
+# in a plain Python virtual environment:
+#
+#   python3 -m venv .venv
+#   source .venv/bin/activate
+#   python3 -m pip install -r requirements-dev.txt
+#
+# On the rover's Pi, don't use this file: the rover's packages come from rosdep and apt
+# (see TTB-README.md step 2.3), and OpenCV there comes from apt (python3-opencv).
+
+pytest
+
+# osr_biodiversity tests
+numpy
+flask
+requests
+opencv-python-headless   # the yuyv image and phone-upload tests use OpenCV
