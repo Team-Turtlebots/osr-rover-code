@@ -15,6 +15,8 @@ camera:=none  start only the web page (camera started some other way)
 Whatever the source, images arrive on image_topic (default /camera/image_raw),
 so switching cameras never changes the web node.
 """
+import os
+
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.conditions import IfCondition
@@ -73,37 +75,44 @@ def generate_launch_description():
         condition=IfCondition(EqualsSubstitution(camera, 'csi')),
     )
 
-    def check_usb_device(context):
+    def start_usb_camera(context):
+        if context.perform_substitution(camera) != 'usb':
+            return []
+        device = context.perform_substitution(LaunchConfiguration('video_device'))
         # /dev/video0 is the CSI hardware on a Pi 5, not the webcam, so there is no safe
         # default. Stop with a hint instead of opening the wrong device.
-        if (context.perform_substitution(camera) == 'usb'
-                and not context.perform_substitution(LaunchConfiguration('video_device'))):
+        if not device:
             raise RuntimeError(
                 'camera:=usb needs video_device:=..., for example '
                 'video_device:=/dev/v4l/by-id/usb-046d_HD_Pro_Webcam_C920_XXXX-video-index0. '
                 'Run `ls /dev/v4l/by-id/` to find your webcam.')
-        return []
-
-    usb_camera = Node(
-        package='usb_cam',
-        executable='usb_cam_node_exe',
-        name='usb_cam',
-        output='screen',
-        respawn=True,
-        respawn_delay=3.0,
-        parameters=[{
-            'video_device': LaunchConfiguration('video_device'),
-            'image_width': LaunchConfiguration('image_width'),
-            'image_height': LaunchConfiguration('image_height'),
-            'framerate': LaunchConfiguration('framerate'),
-            'pixel_format': 'mjpeg2rgb',
-            'camera_name': 'marpy_camera',
-            'frame_id': 'camera',
-        }],
-        remappings=[('image_raw', image_topic),
-                    ('camera_info', '/camera/camera_info')],
-        condition=IfCondition(EqualsSubstitution(camera, 'usb')),
-    )
+        # The /dev/v4l/by-id/... names are links like "../../video0". usb_cam mishandles
+        # them (it tries "/dev/../../video0"), so follow the link here and pass the real
+        # device, e.g. /dev/video0.
+        real_device = os.path.realpath(device)
+        if not os.path.exists(real_device):
+            raise RuntimeError(
+                f'Camera device {device} does not exist. Is the webcam plugged in? '
+                'Run `ls /dev/v4l/by-id/` and copy the name ending in -video-index0.')
+        return [Node(
+            package='usb_cam',
+            executable='usb_cam_node_exe',
+            name='usb_cam',
+            output='screen',
+            respawn=True,
+            respawn_delay=3.0,
+            parameters=[{
+                'video_device': real_device,
+                'image_width': LaunchConfiguration('image_width'),
+                'image_height': LaunchConfiguration('image_height'),
+                'framerate': LaunchConfiguration('framerate'),
+                'pixel_format': 'mjpeg2rgb',
+                'camera_name': 'marpy_camera',
+                'frame_id': 'camera',
+            }],
+            remappings=[('image_raw', image_topic),
+                        ('camera_info', '/camera/camera_info')],
+        )]
 
     test_camera = Node(
         package='image_publisher',
@@ -132,5 +141,5 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription(args + [OpaqueFunction(function=check_usb_device),
-                                     csi_camera, usb_camera, test_camera, web])
+    return LaunchDescription(args + [OpaqueFunction(function=start_usb_camera),
+                                     csi_camera, test_camera, web])
