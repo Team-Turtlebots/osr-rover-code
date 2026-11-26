@@ -4,4 +4,18 @@ ROS/osr_bringup/config/*_mod.yaml
 *.sublime-project
 *.sublime-workspace
 .DS_Store
+
+# --- TurtleBots additions (kept at the end so the daily upstream merge stays simple) ---
+# Python virtual environment for tests and rocker on a PC (see requirements-dev.txt)
 .venv
+# Python and pytest caches
+__pycache__/
+.pytest_cache/
+*.egg-info/
+# colcon output, in case someone builds inside the repo instead of ~/osr_ws
+/build/
+/install/
+/log/
+# Claude Code: personal settings and temporary worktrees
+.claude/settings.local.json
+.claude/worktrees/

@@ -1,2 +1,14 @@
 .git
 .devcontainer
+
+# --- TurtleBots additions ---
+# Not needed in the simulation image, and they make every build slower
+.venv
+.vscode
+.claude
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+build
+install
+log
