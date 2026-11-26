@@ -16,13 +16,20 @@ Guidance for working in this package. See `README.md` for setup and usage.
 
 - Raspberry Pi 5, Ubuntu 24.04, ROS 2 Jazzy. Python deps for the rover live in
   `~/osr_ws/venv` (created with `--system-site-packages`), so apt Python packages are visible.
-- **CSI ribbon cameras don't work on this Pi.** The kernel finds an OV5647 (`rp1-cfe` registers
-  `/dev/video0`-`video7`), but Ubuntu 24.04's libcamera 0.2.0 has no Pi 5 (PiSP) pipeline
-  handler or IPA (`cam -l` lists nothing; its Vc4 handler looks for the Pi 4's Unicam). Fixing it
-  means building Raspberry Pi's libcamera and camera_ros from source. Use a USB UVC webcam
-  (the team has a Logitech C920x) with `usb_cam` instead.
-- Because of those CSI nodes, the USB webcam is usually `/dev/video8+`. Prefer
-  `/dev/v4l/by-id/...-video-index0`.
+- **CSI camera (Arducam OV5647) works, but only with libcamera built from source.** Ubuntu
+  24.04's libcamera 0.2.0 has no Pi 5 (PiSP) pipeline handler, so `cam -l` lists nothing with
+  it. The fix, done on the rover 2026-11-25, is Raspberry Pi's libcamera fork (v0.8.0+rpt,
+  `rpi/pisp`) in `/usr/local` plus `camera_ros` built in `~/osr_ws/src`. Steps are in
+  `TTB-Camera.md` at the repo root. Never add `camera_ros` to `package.xml` or install
+  `ros-jazzy-camera-ros`/`ros-jazzy-libcamera`: rosdep would pull in the second libcamera.
+  Tested: 1296x972 at ~30 fps on `/camera/image_raw`. A missing calibration file error from
+  `camera_calibration_parsers` is expected and harmless.
+- A USB UVC webcam (the team has a Logitech C920x) with `usb_cam` is the other option; not yet
+  set up on the rover.
+- The CSI hardware (`rp1-cfe`) registers `/dev/video0`-`video7` whether or not a camera is
+  attached, so a USB webcam is usually `/dev/video8+`. Prefer `/dev/v4l/by-id/...-video-index0`.
+  The launch file therefore has no default `video_device` and stops with a hint if `camera:=usb`
+  is used without one.
 - The Pi is powered from the PCB's 5 V rail (Pololu D24V150F5, 15 A) through screw terminals,
   not USB-C PD, so it limits USB to 0.6 A total unless `PSU_MAX_CURRENT=5000` is set in the
   EEPROM. A single webcam fits. Heavier USB devices (e.g. Luxonis OAK-D Lite, ~5 W) need that
@@ -33,14 +40,14 @@ Guidance for working in this package. See `README.md` for setup and usage.
 ## Architecture
 
 ```
-usb_cam / image_publisher ──/camera/image_raw──► web_node (rclpy + Flask thread, port 8000)
-                                                  ├─ web_app.py      routes + phone page (HTML/JS inline)
-                                                  ├─ plantnet.py     Pl@ntNet API client
-                                                  ├─ observations.py photos + observations.csv
-                                                  └─ image_utils.py  sensor_msgs/Image → BGR numpy
+camera_ros / usb_cam / image_publisher ──/camera/image_raw──► web_node (rclpy + Flask thread, port 8000)
+                                                               ├─ web_app.py      routes + phone page (HTML/JS inline)
+                                                               ├─ plantnet.py     Pl@ntNet API client
+                                                               ├─ observations.py photos + observations.csv
+                                                               └─ image_utils.py  sensor_msgs/Image → BGR numpy
 ```
 
-- `launch/biodiversity.launch.py`: `camera:=usb|test|none`. Every source is remapped to
+- `launch/biodiversity.launch.py`: `camera:=csi|usb|test|none` (default `csi`). Every source is remapped to
   `image_topic` (default `/camera/image_raw`), so swapping cameras never touches the web node.
 - `observations.py`, `plantnet.py`, `image_utils.py`, `web_app.py` have **no ROS imports** and
   are unit-tested. Keep it that way: put ROS glue only in `web_node.py`.
@@ -68,7 +75,7 @@ usb_cam / image_publisher ──/camera/image_raw──► web_node (rclpy + Fla
 ## Tests
 
 ```bash
-cd ROS/osr_biodiversity && python3 -m pytest test/     # no ROS needed; needs numpy, flask, requests
+cd ROS/osr_biodiversity && python3 -m pytest test/     # no ROS needed; deps in /requirements-dev.txt
 ```
 
 The Pl@ntNet endpoint and response fields in `plantnet.py` were written from memory of the v2
@@ -77,9 +84,12 @@ test fixture together.
 
 ## Status and next steps
 
-Draft 1 (2026-11-25), for the FLL demo on 2026-12-05. Not yet run on the Pi. Next, roughly in order:
+Draft 1 (2026-11-25), for the FLL demo on 2026-12-05. On the Pi so far: the OV5647 publishes
+through camera_ros (run by hand, `ros2 run`). The web node and `camera:=csi` launch haven't run on
+the Pi yet. Next, roughly in order:
 
-1. First run on the Pi with the C920x: `camera:=usb`, live view, Identify, phone upload, CSV.
+1. First run on the Pi with the OV5647: `camera:=csi`, live view (check colors), Identify,
+   phone upload, CSV. Later, the same with the C920x on `camera:=usb`.
 2. Confirm the Pl@ntNet API call against the real service.
 3. Add it to `osr_mod_launch.py` (after the demo setup is stable).
 4. `capture_node`: save a photo every N seconds while driving.
